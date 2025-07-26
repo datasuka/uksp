@@ -6,11 +6,13 @@ from datetime import datetime
 st.set_page_config(page_title="Monitor Link Pendaftaran USKP", layout="centered")
 
 st.title("🔍 Monitor Link Pendaftaran USKP Tingkat B")
-st.markdown("Auto-refresh tiap 5 menit. Deteksi link aktif & periode terbuka dari isi halaman.")
+st.markdown("Auto-refresh tiap 5 menit. Deteksi link aktif & periode pendaftaran dibuka.")
 
-# Webhook opsional
-webhook_url = st.secrets.get("webhook_url", "")
+# Sidebar webhook config
+st.sidebar.header("🔔 Notifikasi Webhook")
+webhook_url = st.sidebar.text_input("Webhook URL (opsional)", type="default")
 
+# UUID default
 default_uuids = [
     "103b54ac-e44e-4c59-a523-c5e8d28740f5",
     "ee064223-0297-456f-91da-52c8eb8d4618",
@@ -20,14 +22,14 @@ default_uuids = [
     "9f0f6c17-d9d0-47f1-8c6a-a4d828e8503c"
 ]
 
-manual_input = st.text_area("➕ Masukkan UUID Tambahan (pisahkan koma):", "")
+manual_input = st.text_area("➕ Tambahkan UUID (pisahkan koma):", "")
 manual_uuids = [u.strip() for u in manual_input.split(",") if len(u.strip()) == 36]
 all_uuids = list(set(default_uuids + manual_uuids))
 
 base_url_create = "https://bppk.kemenkeu.go.id/uskp/registrant/create/"
 base_url_summary = "https://bppk.kemenkeu.go.id/uskp/registrant/"
 
-st.markdown("⏳ Auto-refresh tiap 5 menit. Terakhir diperiksa:")
+st.markdown("⏳ Terakhir diperiksa:")
 st.code(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
 triggered_webhook = False
@@ -56,14 +58,14 @@ for uuid in all_uuids:
                 }
                 try:
                     requests.post(webhook_url, json=payload, timeout=5)
-                    st.info("📨 Webhook triggered.")
+                    st.sidebar.info("📨 Webhook terkirim.")
                     triggered_webhook = True
                 except Exception as e:
-                    st.error(f"Gagal kirim webhook: {e}")
+                    st.sidebar.error(f"Gagal kirim webhook: {e}")
         else:
             st.warning(f"🕒 Link aktif tapi belum dibuka: `{uuid}`\n• [Formulir]({url_create})\n• [Ringkasan]({url_summary})")
     else:
         st.error(f"❌ Tidak aktif: `{uuid}`\n• {url_create} → {status_create}")
 
-# Auto-refresh meta
+# Auto-refresh meta tag
 st.markdown("<meta http-equiv='refresh' content='300'>", unsafe_allow_html=True)
