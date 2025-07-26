@@ -1,13 +1,14 @@
 
 import streamlit as st
 import requests
+from datetime import datetime
 
 st.set_page_config(page_title="Monitor Link Pendaftaran USKP", layout="centered")
 
 st.title("🔍 Monitor Link Pendaftaran USKP Tingkat B")
 st.markdown("Aplikasi ini memantau status link-link pendaftaran yang diduga untuk **USKP Tingkat B**.")
 
-uuid_list = [
+default_uuids = [
     "103b54ac-e44e-4c59-a523-c5e8d28740f5",
     "ee064223-0297-456f-91da-52c8eb8d4618",
     "0b7424d5-e43c-451a-9e9c-52279a39bab6",
@@ -20,24 +21,38 @@ uuid_list = [
     "71c35a2b-99d3-451d-8ec1-9e6e49802d4a"
 ]
 
-base_url = "https://bppk.kemenkeu.go.id/uskp/registrant/create/"
+manual_input = st.text_area("➕ Masukkan UUID Tambahan (pisahkan dengan koma):", "")
+manual_uuids = [u.strip() for u in manual_input.split(",") if len(u.strip()) == 36]
 
-st.info("Klik tombol di bawah untuk memulai pengecekan link.")
+all_uuids = list(set(default_uuids + manual_uuids))
 
-if st.button("🔄 Cek Status Link"):
+base_url_create = "https://bppk.kemenkeu.go.id/uskp/registrant/create/"
+base_url_summary = "https://bppk.kemenkeu.go.id/uskp/registrant/"
+
+st.info("Klik tombol di bawah untuk memulai pengecekan link (create & summary).")
+
+if st.button("🔄 Cek Status Link Sekarang"):
     results = []
-    for uuid in uuid_list:
-        url = base_url + uuid + "/"
+    for uuid in all_uuids:
+        url_create = base_url_create + uuid + "/"
+        url_summary = base_url_summary + uuid + "/summary/"
         try:
-            r = requests.head(url, allow_redirects=True, timeout=5)
-            status = r.status_code
-        except Exception as e:
-            status = str(e)
-        results.append((uuid, url, status))
+            status_create = requests.head(url_create, allow_redirects=True, timeout=5).status_code
+        except:
+            status_create = "ERR"
+        try:
+            status_summary = requests.head(url_summary, allow_redirects=True, timeout=5).status_code
+        except:
+            status_summary = "ERR"
+        results.append((uuid, url_create, status_create, url_summary, status_summary))
 
-    st.markdown("### Hasil Pengecekan:")
-    for uuid, url, status in results:
-        if status == 200:
-            st.success(f"✅ [Link Aktif]({url}) - UUID: {uuid}")
+    st.markdown(f"### ⏱️ Diperiksa pada: {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
+    for uuid, url_create, status_c, url_summary, status_s in results:
+        if status_c == 200 or status_s == 200:
+            st.success(f"✅ [Aktif] UUID: `{uuid}`  
+• [Formulir]({url_create}) → {status_c}  
+• [Ringkasan]({url_summary}) → {status_s}")
         else:
-            st.warning(f"❌ Link belum aktif - UUID: {uuid} (Status: {status})")
+            st.warning(f"⏳ Belum aktif: `{uuid}`  
+• {url_create} → {status_c}  
+• {url_summary} → {status_s}")
